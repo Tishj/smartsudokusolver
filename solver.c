@@ -6,35 +6,26 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/20 00:26:40 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/20 01:32:56 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/20 19:35:00 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <unistd.h>
-
-enum	e_value
-{
-	ONE,
-	TWO,
-	THREE,
-	FOUR,
-	FIVE,
-	SIX,
-	SEVEN,
-	EIGHT,
-	NINE
-};
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
 
 unsigned short	g_masks[9] = {
-	[ONE] = '\x8000',
-	[TWO] = '\x4000',
-	[THREE] = '\x2000',
-	[FOUR] = '\x1000',
-	[FIVE] = '\x800',
-	[SIX] = '\x400',
-	[SEVEN] = '\x200',
-	[EIGHT] = '\x100',
-	[NINE] = '\x80',
+	[0] = (1 << 0),
+	[1] = (1 << 1),
+	[2] = (1 << 2),
+	[3] = (1 << 3),
+	[4] = (1 << 4),
+	[5] = (1 << 5),
+	[6] = (1 << 6),
+	[7] = (1 << 7),
+	[8] = (1 << 8),
 };
 
 typedef struct	s_coord
@@ -47,8 +38,35 @@ typedef struct	s_square
 {
 	unsigned short	potential;
 	int				value;
-	t_coord	pos;
+	t_coord			pos;
 }				t_square;
+
+void	debug(t_square *square, size_t i)
+{
+	printf("BOARD[%ld]\n", i);
+	printf("POS: %d,%d\n", square->pos.x, square->pos.y);
+	printf("POTENTIAL:\n%d\n", square->potential);
+	printf("VALUE: %d\n", square->value);
+}
+
+int		error(char *errstr)
+{
+	write(1, errstr, strlen(errstr));
+	return (1);
+}
+
+void	print_potential(unsigned short *masks, size_t size)
+{
+	size_t i;
+
+	i = 0;
+	while (i < size)
+	{
+		printf("%d\n", masks[i]);
+		i++;
+	}
+	printf("\n");
+}
 
 void	print_board(t_square *board)
 {
@@ -65,9 +83,10 @@ void	print_board(t_square *board)
 		board[i + 8].value + '0');
 		i += 9;
 	}
+	write(1, "\n", 1);
 }
 
-void	init_board(t_square *board)
+void	init_board(t_square *board, char *start)
 {
 	size_t	i;
 
@@ -75,8 +94,11 @@ void	init_board(t_square *board)
 	while (i < 81)
 	{
 		board[i].pos = (t_coord){i % 9, i / 9};
-		board[i].potential = (unsigned short)'\xFF80';
-		board[i].value = 0;
+		board[i].value = start[i] - '0';
+		if (board[i].value == 0)
+			board[i].potential = 511; //1111 1111 1
+		else
+			board[i].potential = g_masks[board[i].value - 1];
 		i++;
 	}
 }
@@ -95,22 +117,116 @@ int		setvalue(unsigned short potential)
 	return (0);
 }
 
-void	update(t_square *square, int value) //remove the potential, set value if one potential left.
+int		is_in_block(t_coord pos, t_coord tocheck)
 {
-	square->potential |= g_masks[value];
+	if (pos.x / 3 == tocheck.x / 3 && pos.y / 3 == tocheck.y / 3)
+		return (1);
+	return (0);
+}
+
+int		is_in_horizontal(t_coord pos, t_coord tocheck)
+{
+	if (pos.y == tocheck.y)
+		return (1);
+	return (0);
+}
+
+int		is_in_vertical(t_coord pos, t_coord tocheck)
+{
+	if (pos.x == tocheck.x)
+		return (1);
+	return (0);
+}
+
+unsigned short	*distill_potential(unsigned short potential, size_t *size)
+{
+	unsigned short	*masks;
+	size_t			i;
+	size_t			j;
+
+	i = 0;
+	j = 0;
+	while (i < 9)
+	{
+		if ((potential & g_masks[i]) == g_masks[i])
+			j++;
+		i++;
+	}
+	masks = malloc(sizeof(unsigned short) * j);
+	*size = j;
+	i = 0;
+	j = 0;
+	while (i < 9)
+	{
+		if ((potential & g_masks[i]) == g_masks[i])
+		{
+			masks[j] = g_masks[i];
+			j++;
+		}
+		i++;
+	}
+	return (masks);
+}
+
+void	onlyoption(t_square *board, t_square *to_check, unsigned short *masks, size_t size)
+{
+	size_t	i;
+	size_t	j;
+	int		count[3];
+
+	i = 0;
+	j = 0;
+	while (i < size) //loop over every potential
+	{
+		j = 0;
+		count[0] = 0;
+		count[1] = 0;
+		count[2] = 0;
+		while (j < 81) //check every square
+		{
+			if (&board[j] != to_check) //dont check itself
+			{
+				if (is_in_block(board[j].pos, to_check->pos) && (board[j].potential & masks[i]) == masks[i]) //if potential can be found
+					count[0]++;
+				if (is_in_horizontal(board[j].pos, to_check->pos) && (board[j].potential & masks[i]) == masks[i])
+					count[1]++;
+				if (is_in_vertical(board[j].pos, to_check->pos) && (board[j].potential & masks[i]) == masks[i])
+					count[2]++;
+			}
+			j++;
+		}
+		if (!count[0] || !count[1] || !count[2]) //if in either BLOCK | HORIZON | VERT no potential can be found, then the value of the square can be set
+		{
+			to_check->potential = masks[i];
+			break ;
+		}
+		i++;
+	}
+}
+
+void	update(t_square *board, t_square *square, int value) //remove the potential, set value if one potential left.
+{
+	unsigned short	*masks;
+	size_t			size;
+
+	if (value)
+		square->potential &= ~g_masks[value - 1];
+	masks = distill_potential(square->potential, &size);
+	onlyoption(board, square, masks, size);
 	square->value = setvalue(square->potential);
+	free(masks);
 }
 
 int	elimination_check(t_square subject, t_square square) //check if they collide
 {
-	if (subject.potential & g_masks[square.value] != g_masks[square.value]) //potential has already been removed
+	int		check;
+
+	if (subject.potential & g_masks[square.value] != g_masks[square.value]) //potential has already been removed??? this shouldnt work
 		return (0);
-	if (subject.pos.x == square.pos.x || subject.pos.y == square.pos.y) //Horizontal and vertical check
-		return (1);
-	if (subject.pos.x / 3 == square.pos.x / 3 && subject.pos.y / 3 == square.pos.y / 3)
-		return (1);
-	//need to write a check to check if in the same box.
-	return (0);
+	check = (is_in_block(subject.pos, square.pos) ||
+			is_in_horizontal(subject.pos, square.pos) ||
+			is_in_vertical(subject.pos, square.pos));
+	return (check) ? square.value : 0;
 }
 
 void	crossreference(t_square *board, t_square *square)
@@ -120,9 +236,8 @@ void	crossreference(t_square *board, t_square *square)
 	i = 0;
 	while (i < 81)
 	{
-		if (&board[i] != square)
-			if (elimination_check(board[i], *square))
-				update(&board[i], square->value);
+		if (&board[i] != square) //if they're not the same adress
+			update(board, &board[i], elimination_check(board[i], *square)); //updates the square to reflect the change.
 		i++;
 	}
 }
@@ -130,40 +245,44 @@ void	crossreference(t_square *board, t_square *square)
 int		solved(t_square *board)
 {
 	size_t	i;
-	size_t	len;
 
 	i = 0;
-	len = 0;
 	while (i < 81)
 	{
-		if (board->value != 0)
-			len++;
+		if (board[i].value == 0)
+			break ;
 		i++;
 	}
-	return (len == 81);
+	if (i == 81)
+		return (1);
+	return (0);
 }
 
 void	solver(t_square *board)
 {
 	size_t		i;
 
-	i = 0;
 	while (!solved(board))
 	{
-		while (i < 81 && !board[i].value)
+		i = 0;
+		while (i < 81)
+		{
+			if (board[i].value)
+				crossreference(board, &board[i]);
 			i++;
-		if (i == 81)
-			exit(1);//error
-		crossreference(board, &board[i]);
+		}
 	}
 }
 
 int		main(void)
 {
 	t_square	board[81];
-	char		*start; //still need to add the starting squares somehow :/
+//	char		start[] = "000807000006050071050000400000100064000005013900026007071009000009010000068400000";
+	char		start[] = "000000000000003085001020000000507000004000100090000000500000073002010000000040009";
 
-	init_board(board);
+	init_board(board, start);
+	print_board(board);
 	solver(board);
+	print_board(board);
 	return (0);
 }
