@@ -1,0 +1,43 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         ::::::::             #
+#    Makefile                                           :+:    :+:             #
+#                                                      +:+                     #
+#    By: tbruinem <tbruinem@student.codam.nl>         +#+                      #
+#                                                    +#+                       #
+#    Created: 2020/04/21 14:53:09 by tbruinem      #+#    #+#                  #
+#    Updated: 2020/04/21 15:34:47 by tbruinem      ########   odam.nl          #
+#                                                                              #
+# **************************************************************************** #
+
+NAME = solver
+SRC_DIR = ./src/
+INCL_DIR = ./incl/
+SRC =	utils.c \
+		board.c \
+		squarechecks.c \
+		areachecks.c \
+		debug.c \
+		main.c \
+		input.c \
+		strdups.c \
+
+CFLAGS = -Wall -Wextra -Werror
+
+OBJ = $(SRC:%.c=%.o)
+
+all: $(NAME)
+
+%.o : %.c
+	$(CC) $(CFLAGS) -I $(INCL_DIR) -c $< -o $@ 
+
+$(NAME): $(addprefix $(SRC_DIR), $(OBJ))
+	$(CC) $(CFLAGS) -I $(INCL_DIR) $^ -o $(NAME)
+
+clean:
+	rm -rf $(addprefix $(SRC_DIR), $(OBJ))
+
+fclean: clean
+	rm -rf $(NAME)
+
+re: fclean all
