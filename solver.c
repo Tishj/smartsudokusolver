@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/20 00:26:40 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/20 19:35:00 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/21 14:29:27 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <signal.h>
 
 unsigned short	g_masks[9] = {
@@ -96,7 +97,7 @@ void	init_board(t_square *board, char *start)
 		board[i].pos = (t_coord){i % 9, i / 9};
 		board[i].value = start[i] - '0';
 		if (board[i].value == 0)
-			board[i].potential = 511; //1111 1111 1
+			board[i].potential = 0b111111111; //1111 1111 1
 		else
 			board[i].potential = g_masks[board[i].value - 1];
 		i++;
@@ -168,6 +169,81 @@ unsigned short	*distill_potential(unsigned short potential, size_t *size)
 	return (masks);
 }
 
+//example X5,Y4 = 9 * Y = 36 + X = 41
+// ((4 / 3 = 1) * 3 = 3) * 9 = 27 (which is where we start)
+// (((4 / 3 = 1) * 3 = 3) + 2 = 5) * 9 = 45 (which is where we end)
+size_t	check_block(t_coord subject, t_square *board, unsigned short mask)
+{
+	size_t	i;
+	size_t	count;
+
+	count = 0;
+	i = ((subject.y / 3) * 3) * 9;
+	i += ((subject.x / 3) * 3);
+	while (i < (((subject.y / 3) * 3) + 3) * 9)
+	{
+		if ((subject.y * 3) + subject.x != i)
+			count += ((board[i].potential & mask) == mask);
+		if ((subject.y * 3) + subject.x != i + 1)
+			count += ((board[i + 1].potential & mask) == mask);
+		if ((subject.y * 3) + subject.x != i + 2)
+			count += ((board[i + 2].potential & mask) == mask);
+		i += 9;
+	}
+	return (count);
+}
+
+//example X2,Y4 = 9 * Y = 36 + X = 38
+size_t	check_horizontal(t_coord subject, t_square *board, unsigned short mask)
+{
+	size_t	i;
+	size_t	count;
+
+	count = 0;
+	i = subject.y * 9;
+	while (i < (subject.y * 9) + 9)
+	{
+		if ((subject.y * 9) + subject.x != i)
+			count += ((board[i].potential & mask) == mask);
+		i++;
+	}
+	return (count);
+}
+
+size_t	check_vertical(t_coord subject, t_square *board, unsigned short mask)
+{
+	size_t	i;
+	size_t	count;
+
+	count = 0;
+	i = subject.x;
+	while (i < 81)
+	{
+		if ((subject.y * 9) + subject.x != i)
+			count += ((board[i].potential & mask) == mask);
+		i += 9;
+	}
+	return (count);
+}
+
+void	onlyoption_optimized(t_square *board, t_square *to_check, unsigned short *masks, size_t size)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < size)
+	{
+		if (check_vertical(to_check->pos, board, masks[i]) == 0 ||
+			check_block(to_check->pos, board, masks[i]) == 0 ||
+			check_horizontal(to_check->pos, board, masks[i] == 0))
+			break ;
+		i++;
+	}
+	if (i != size)
+		to_check->potential = masks[i];
+}
+
+//this can be optimized, we know the exact X and Y of the squares we need to check
 void	onlyoption(t_square *board, t_square *to_check, unsigned short *masks, size_t size)
 {
 	size_t	i;
@@ -179,9 +255,7 @@ void	onlyoption(t_square *board, t_square *to_check, unsigned short *masks, size
 	while (i < size) //loop over every potential
 	{
 		j = 0;
-		count[0] = 0;
-		count[1] = 0;
-		count[2] = 0;
+		bzero(count, sizeof(int) * 3);
 		while (j < 81) //check every square
 		{
 			if (&board[j] != to_check) //dont check itself
@@ -213,6 +287,7 @@ void	update(t_square *board, t_square *square, int value) //remove the potential
 		square->potential &= ~g_masks[value - 1];
 	masks = distill_potential(square->potential, &size);
 	onlyoption(board, square, masks, size);
+//	onlyoption_optimized(board, square, masks, size);
 	square->value = setvalue(square->potential);
 	free(masks);
 }
@@ -250,12 +325,10 @@ int		solved(t_square *board)
 	while (i < 81)
 	{
 		if (board[i].value == 0)
-			break ;
+			return (0);
 		i++;
 	}
-	if (i == 81)
-		return (1);
-	return (0);
+	return (1);
 }
 
 void	solver(t_square *board)
