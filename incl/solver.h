@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/21 14:37:56 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/21 15:31:48 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/21 16:14:02 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,17 @@
 # include <signal.h>
 
 /*
+**	---------------------------------ENUMS----------------------------------#
+*/
+
+enum	e_colors
+{
+	WHITE,
+	GREY,
+	BLUE,
+};
+
+/*
 **	---------------------------------STRUCTS----------------------------------#
 */
 
@@ -39,6 +50,7 @@ typedef struct	s_square
 	unsigned short	potential;
 	int				value;
 	t_coord			pos;
+	int				color;
 }				t_square;
 
 /*
@@ -49,7 +61,7 @@ int		is_in_block(t_coord pos, t_coord tocheck);
 int		is_in_horizontal(t_coord pos, t_coord tocheck);
 int		is_in_vertical(t_coord pos, t_coord tocheck);
 
-void	print_board(t_square *board);
+void	board_print(t_square *board);
 int		error(char *errstr);
 char	*strdups(char *str, char *set);
 

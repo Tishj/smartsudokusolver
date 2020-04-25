@@ -6,26 +6,30 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/21 14:39:39 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/21 14:40:37 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/21 16:31:31 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "solver.h"
 
-void	print_board(t_square *board)
+//might be useful to print in colors to distinguish between starting numbers and discovered ones
+void	board_print(t_square *board)
 {
 	size_t	i;
+	char	*colors[] = {
+		[WHITE]	= "\x1b[38;5;236m",
+		[BLUE] = "\x1b[36;1m",
+		[GREY] = "\x1b[4m",
+	};
 
 	i = 0;
 	while (i < 81)
 	{
-		printf("%c %c %c %c %c %c %c %c %c\n",
-		board[i].value + '0', board[i + 1].value + '0',
-		board[i + 2].value + '0', board[i + 3].value + '0',
-		board[i + 4].value + '0', board[i + 5].value + '0',
-		board[i + 6].value + '0', board[i + 7].value + '0',
-		board[i + 8].value + '0');
-		i += 9;
+		printf("%s%c%s ", colors[board[i].color], board[i].value + '0', "\x1b[0m");
+//		printf("%c ", board[i].value + '0');
+		i++;
+		if (i % 9 == 0)
+			printf("\n");
 	}
 	write(1, "\n", 1);
 }

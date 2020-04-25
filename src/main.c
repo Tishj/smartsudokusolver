@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/20 00:26:40 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/21 15:37:41 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/25 02:12:01 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ unsigned short	g_masks[9] = {
 	[8] = (1 << 8),
 };
 
-void	init_board(t_square *board, char *start)
+void	board_init(t_square *board, char *start)
 {
 	size_t	i;
 
@@ -34,9 +34,15 @@ void	init_board(t_square *board, char *start)
 		board[i].pos = (t_coord){i % 9, i / 9};
 		board[i].value = start[i] - '0';
 		if (board[i].value == 0)
+		{
 			board[i].potential = 0b111111111;
+			board[i].color = WHITE;
+		}
 		else
+		{
 			board[i].potential = g_masks[board[i].value - 1];
+			board[i].color = GREY;
+		}
 		i++;
 	}
 }
@@ -87,14 +93,19 @@ void	onlyoption_optimized(t_square *board, t_square *to_check,
 	{
 		if (check_vertical(to_check->pos, board, masks[i]) == 0 ||
 			check_block(to_check->pos, board, masks[i]) == 0 ||
-			check_horizontal(to_check->pos, board, masks[i] == 0))
+			check_horizontal(to_check->pos, board, masks[i]) == 0)
+		{
 			break ;
+		}
+//		sleep(10);
 		i++;
 	}
-	if (i != size)
+	if (i < size)
 		to_check->potential = masks[i];
 }
 
+//need to add support for the possibility where two values can only be inside 2 places,
+//then their potential needs to be updated to be limited to those two values, nothing else
 void	onlyoption(t_square *board, t_square *to_check,
 		unsigned short *masks, size_t size)
 {
@@ -114,13 +125,22 @@ void	onlyoption(t_square *board, t_square *to_check,
 			{
 				if (is_in_block(board[j].pos, to_check->pos) &&
 					(board[j].potential & masks[i]) == masks[i])
+				{
 					count[0]++;
+					printf("BLOCK: %ld | count: %d\n", j, count[0]);
+				}
 				if (is_in_horizontal(board[j].pos, to_check->pos) &&
 					(board[j].potential & masks[i]) == masks[i])
+				{
 					count[1]++;
+					printf("HORIZ: %ld | count: %d\n", j, count[1]);
+				}
 				if (is_in_vertical(board[j].pos, to_check->pos) &&
 					(board[j].potential & masks[i]) == masks[i])
+				{
 					count[2]++;
+					printf("VERT: %ld | count: %d\n", j, count[2]);
+				}
 			}
 			j++;
 		}
@@ -129,6 +149,7 @@ void	onlyoption(t_square *board, t_square *to_check,
 			to_check->potential = masks[i];
 			break ;
 		}
+		sleep(10);
 		i++;
 	}
 }
@@ -141,9 +162,15 @@ void	square_update(t_square *board, t_square *square, int value)
 	if (value)
 		square->potential &= ~g_masks[value - 1];
 	masks = distill_potential(square->potential, &size);
-	onlyoption(board, square, masks, size);
-//	onlyoption_optimized(board, square, masks, size);
+//	onlyoption(board, square, masks, size);
+	onlyoption_optimized(board, square, masks, size);
 	square->value = setvalue(square->potential);
+	if (square->value)
+	{
+		square->color = BLUE;
+		board_print(board);
+		sleep(1);
+	}
 	free(masks);
 }
 
@@ -167,7 +194,7 @@ void	crossreference(t_square *board, t_square *square)
 	i = 0;
 	while (i < 81)
 	{
-		if (&board[i] != square)
+		if (&board[i] != square && board[i].value == 0)
 			square_update(board, &board[i],
 			elimination_check(board[i], *square));
 		i++;
@@ -180,8 +207,8 @@ int		main(int argc, char **argv)
 	char		*start;
 
 	start = input_processing(argc, argv);
-	init_board(board, start);
+	board_init(board, start);
 	board_solver(board);
-	print_board(board);
+	board_print(board);
 	return (0);
 }
