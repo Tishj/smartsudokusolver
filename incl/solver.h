@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/21 14:37:56 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/21 16:14:02 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/25 13:25:53 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,13 @@
 /*
 **	---------------------------------ENUMS----------------------------------#
 */
+
+enum	e_groups
+{
+	BLOCK,
+	VERTICAL,
+	HORIZONTAL
+};
 
 enum	e_colors
 {
@@ -71,9 +78,17 @@ void	print_potential(unsigned short *masks, size_t size);
 void	board_solver(t_square *board);
 void	crossreference(t_square *board, t_square *square);
 
-size_t	check_block(t_coord subject, t_square *board, unsigned short mask);
-size_t	check_horizontal(t_coord subject, t_square *board, unsigned short mask);
-size_t	check_vertical(t_coord subject, t_square *board, unsigned short mask);
+void	analyze_block(t_square *board, unsigned short *masks);
+
+size_t	check_block(size_t groupindex, t_square *board,
+		unsigned short mask, int *array);
+size_t	check_horizontal(size_t groupindex, t_square *board,
+		unsigned short mask, int *array);
+size_t	check_vertical(size_t groupindex, t_square *board,
+		unsigned short mask, int *array);
+
+t_coord	index_to_coord(size_t group_index, char grouptype);
+size_t	coord_to_index(t_coord coord, char grouptype);
 
 char	*input_processing(int argc, char **argv);
 

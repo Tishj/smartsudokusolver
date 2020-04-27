@@ -6,7 +6,7 @@
 #    By: tbruinem <tbruinem@student.codam.nl>         +#+                      #
 #                                                    +#+                       #
 #    Created: 2020/04/21 14:53:09 by tbruinem      #+#    #+#                  #
-#    Updated: 2020/04/21 15:34:47 by tbruinem      ########   odam.nl          #
+#    Updated: 2020/04/25 13:26:49 by tbruinem      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,6 +23,9 @@ SRC =	utils.c \
 		strdups.c \
 
 CFLAGS = -Wall -Wextra -Werror
+ifdef DEBUG
+	CFLAGS += -g -fsanitize=address
+endif
 
 OBJ = $(SRC:%.c=%.o)
 

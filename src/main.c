@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2020/04/20 00:26:40 by tbruinem      #+#    #+#                 */
-/*   Updated: 2020/04/25 02:12:01 by tbruinem      ########   odam.nl         */
+/*   Updated: 2020/04/26 16:41:30 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,9 +91,12 @@ void	onlyoption_optimized(t_square *board, t_square *to_check,
 	i = 0;
 	while (i < size)
 	{
-		if (check_vertical(to_check->pos, board, masks[i]) == 0 ||
-			check_block(to_check->pos, board, masks[i]) == 0 ||
-			check_horizontal(to_check->pos, board, masks[i]) == 0)
+		if (check_vertical(coord_to_index(to_check->pos, VERTICAL),
+			board, masks[i], NULL) == 1 ||
+			check_block(coord_to_index(to_check->pos, BLOCK),
+			board, masks[i], NULL) == 1 ||
+			check_horizontal(coord_to_index(to_check->pos, HORIZONTAL),
+			board, masks[i], NULL) == 1)
 		{
 			break ;
 		}
@@ -149,7 +152,7 @@ void	onlyoption(t_square *board, t_square *to_check,
 			to_check->potential = masks[i];
 			break ;
 		}
-		sleep(10);
+//		sleep(10);
 		i++;
 	}
 }
@@ -172,6 +175,7 @@ void	square_update(t_square *board, t_square *square, int value)
 		sleep(1);
 	}
 	free(masks);
+//	analyze_block(board, g_masks);
 }
 
 int	elimination_check(t_square subject, t_square square)
@@ -201,6 +205,64 @@ void	crossreference(t_square *board, t_square *square)
 	}
 }
 
+void	pot_print(unsigned short pot, unsigned short *masks, size_t i)
+{
+	printf("INDEX: %-2ld : [%c][%c][%c][%c][%c][%c][%c][%c][%c]\n", i,
+		((pot & masks[0]) == masks[0]) ? '1' : ' ',
+		((pot & masks[1]) == masks[1]) ? '2' : ' ',
+		((pot & masks[2]) == masks[2]) ? '3' : ' ',
+		((pot & masks[3]) == masks[3]) ? '4' : ' ',
+		((pot & masks[4]) == masks[4]) ? '5' : ' ',
+		((pot & masks[5]) == masks[5]) ? '6' : ' ',
+		((pot & masks[6]) == masks[6]) ? '7' : ' ',
+		((pot & masks[7]) == masks[7]) ? '8' : ' ',
+		((pot & masks[8]) == masks[8]) ? '9' : ' ');
+}
+
+void	tmp_debug(t_square *board, unsigned short *masks)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < 81)
+	{
+		pot_print(board[i].potential, masks, i);
+		i++;
+	}
+	sleep(1);
+}
+
+int		board_issolved(t_square *board)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < 81)
+	{
+		if (board[i].value == 0)
+			return (0);
+		i++;
+	}
+	return (1);
+}
+
+void	board_solver(t_square *board)
+{
+	size_t		i;
+
+	while (!board_issolved(board))
+	{
+		i = 0;
+		while (i < 81)
+		{
+			if (board[i].value)
+				crossreference(board, &board[i]);
+			i++;
+		}
+		tmp_debug(board, g_masks);
+	}
+}
+
 int		main(int argc, char **argv)
 {
 	t_square	board[81];
@@ -208,6 +270,7 @@ int		main(int argc, char **argv)
 
 	start = input_processing(argc, argv);
 	board_init(board, start);
+	board_print(board);
 	board_solver(board);
 	board_print(board);
 	return (0);
